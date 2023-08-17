@@ -6,6 +6,7 @@ package liner
 import (
 	"bufio"
 	"errors"
+	"io"
 	"os"
 	"os/signal"
 	"strconv"
@@ -30,11 +31,16 @@ type State struct {
 	useCHA      bool
 }
 
+// DefaultWriter is used to detect terminal mode and used to write
+// prompts and warnings.
+var DefaultWriter = os.Stdout
+
 // NewLiner initializes a new *State, and sets the terminal into raw mode. To
 // restore the terminal to its previous state, call State.Close().
 func NewLiner() *State {
 	var s State
 	s.r = bufio.NewReader(os.Stdin)
+	s.writer = DefaultWriter
 
 	s.terminalSupported = TerminalSupported()
 	if m, err := TerminalMode(); err == nil {
@@ -42,7 +48,11 @@ func NewLiner() *State {
 	} else {
 		s.inputRedirected = true
 	}
-	if _, err := getMode(syscall.Stdout); err != nil {
+	var mc = syscall.Stdout
+	if DefaultWriter == os.Stderr {
+		mc = syscall.Stderr
+	}
+	if _, err := getMode(mc); err != nil {
 		s.outputRedirected = true
 	}
 	if s.inputRedirected && s.outputRedirected {
@@ -69,6 +79,11 @@ func NewLiner() *State {
 	}
 
 	return &s
+}
+
+// SetWriter replaces the output writer for prompts/warnings. (eg: stdout)
+func (s *State) SetWriter(w io.Writer) {
+	s.writer = w
 }
 
 var errTimedOut = errors.New("timeout")

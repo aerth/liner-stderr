@@ -108,7 +108,7 @@ func (s *State) refresh(prompt []rune, buf []rune, pos int) error {
 
 func (s *State) refreshSingleLine(prompt []rune, buf []rune, pos int) error {
 	s.cursorPos(0)
-	_, err := fmt.Print(string(prompt))
+	_, err := fmt.Fprint(s.writer, string(prompt))
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (s *State) refreshSingleLine(prompt []rune, buf []rune, pos int) error {
 	}
 	pos = countGlyphs(buf[:pos])
 	if pLen+bLen < s.columns {
-		_, err = fmt.Print(string(buf))
+		_, err = fmt.Fprint(s.writer, string(buf))
 		s.eraseLine()
 		s.cursorPos(pLen + pos)
 	} else {
@@ -152,11 +152,11 @@ func (s *State) refreshSingleLine(prompt []rune, buf []rune, pos int) error {
 
 		// Output
 		if start > 0 {
-			fmt.Print("{")
+			fmt.Fprint(s.writer, "{")
 		}
-		fmt.Print(string(line))
+		fmt.Fprint(s.writer, string(line))
 		if end < bLen {
-			fmt.Print("}")
+			fmt.Fprint(s.writer, "}")
 		}
 
 		// Set cursor position
@@ -205,10 +205,10 @@ func (s *State) refreshMultiLine(prompt []rune, buf []rune, pos int) error {
 	s.eraseLine()
 
 	/* Write the prompt and the current buffer content */
-	if _, err := fmt.Print(string(prompt)); err != nil {
+	if _, err := fmt.Fprint(s.writer, string(prompt)); err != nil {
 		return err
 	}
-	if _, err := fmt.Print(string(buf)); err != nil {
+	if _, err := fmt.Fprint(s.writer, string(buf)); err != nil {
 		return err
 	}
 
@@ -319,7 +319,7 @@ func (s *State) printedTabs(items []string) func(tabDirection) (string, error) {
 
 		if numTabs == 2 {
 			if len(items) > 100 {
-				fmt.Printf("\nDisplay all %d possibilities? (y or n) ", len(items))
+				fmt.Fprintf(s.writer, "\nDisplay all %d possibilities? (y or n) ", len(items))
 			prompt:
 				for {
 					next, err := s.readNext()
@@ -347,9 +347,9 @@ func (s *State) printedTabs(items []string) func(tabDirection) (string, error) {
 				for j := 0; j < numColumns*numRows; j += numRows {
 					if i+j < len(items) {
 						if maxWidth > 0 {
-							fmt.Printf("%-*.[1]*s", maxWidth, items[i+j])
+							fmt.Fprintf(s.writer, "%-*.[1]*s", maxWidth, items[i+j])
 						} else {
-							fmt.Printf("%v ", items[i+j])
+							fmt.Fprintf(s.writer, "%v ", items[i+j])
 						}
 					}
 				}
@@ -622,7 +622,7 @@ func (s *State) PromptWithSuggestion(prompt string, text string, pos int) (strin
 	s.historyMutex.RLock()
 	defer s.historyMutex.RUnlock()
 
-	fmt.Print(prompt)
+	fmt.Fprint(s.writer, prompt)
 	var line = []rune(text)
 	historyEnd := ""
 	var historyPrefix []string
@@ -791,7 +791,7 @@ mainLoop:
 				}
 				line = line[:0]
 				pos = 0
-				fmt.Print(prompt)
+				fmt.Fprint(s.writer, prompt)
 				s.restartPrompt()
 			case ctrlH, bs: // Backspace
 				if pos <= 0 {
@@ -839,7 +839,7 @@ mainLoop:
 					len(p)+len(line) < s.columns*4 && // Avoid countGlyphs on large lines
 					countGlyphs(p)+countGlyphs(line) < s.columns-1 {
 					line = append(line, v)
-					fmt.Printf("%c", v)
+					fmt.Fprintf(s.writer, "%c", v)
 					pos++
 				} else {
 					line = append(line[:pos], append([]rune{v}, line[pos:]...)...)
@@ -1038,7 +1038,7 @@ restart:
 	s.startPrompt()
 	s.getColumns()
 
-	fmt.Print(prompt)
+	fmt.Fprint(s.writer, prompt)
 	var line []rune
 	pos := 0
 
@@ -1088,7 +1088,7 @@ mainLoop:
 				}
 				line = line[:0]
 				pos = 0
-				fmt.Print(prompt)
+				fmt.Fprint(s.writer, prompt)
 				s.restartPrompt()
 			// Unused keys
 			case esc, tab, ctrlA, ctrlB, ctrlE, ctrlF, ctrlG, ctrlK, ctrlN, ctrlO, ctrlP, ctrlQ, ctrlR, ctrlS,
@@ -1165,6 +1165,6 @@ func (s *State) eraseWord(pos int, line []rune, killAction int) (int, []rune, in
 
 func (s *State) doBeep() {
 	if !s.noBeep {
-		fmt.Print(beep)
+		fmt.Fprint(s.writer, beep)
 	}
 }

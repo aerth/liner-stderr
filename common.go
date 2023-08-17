@@ -34,6 +34,7 @@ type commonState struct {
 	shouldRestart     ShouldRestart
 	noBeep            bool
 	needRefresh       bool
+	writer            io.Writer // stdout default
 }
 
 // TabStyle is used to select how tab completions are displayed.
@@ -251,8 +252,9 @@ func (s *State) SetBeep(beep bool) {
 }
 
 func (s *State) promptUnsupported(p string) (string, error) {
-	if !s.inputRedirected || !s.terminalSupported {
-		fmt.Print(p)
+	supported := !s.outputRedirected || !s.terminalSupported
+	if supported && p != "" {
+		fmt.Fprint(s.writer, p)
 	}
 	linebuf, _, err := s.r.ReadLine()
 	if err != nil {
